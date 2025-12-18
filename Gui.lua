@@ -12,6 +12,51 @@
 
     --> Basic
 
+        function Gui.CleanLabel(Label)
+            return tostring(Label or "")
+                :gsub("^[^\x20-\x7E]+", "")
+                :gsub("^%s+", "")
+                :gsub("%s+$", "")
+        end
+
+        function Gui.BuildTabs(Labels, IdPrefix, ResolveFn, FallbackFn)
+            local Tabs = {}
+
+            for _, RawLabel in ipairs(Labels or {}) do
+                local CleanName = Gui.CleanLabel(RawLabel)
+
+                Tabs[#Tabs + 1] = {
+                    Label = RawLabel,
+                    Draw = function()
+                        Gui.Child("##" .. tostring(IdPrefix or "Tabs") .. "_" .. CleanName, 0, true, function()
+                            local Fn = ResolveFn and ResolveFn(CleanName, RawLabel) or nil
+                            if type(Fn) == "function" then
+                                Fn()
+                            elseif type(FallbackFn) == "function" then
+                                FallbackFn()
+                            else
+                                DrawBlank(0.50, 2)
+                            end
+                        end)
+                    end
+                }
+            end
+
+            return Tabs
+        end
+
+        function Gui.Header(Text)
+            ImGui.Text(Text)
+            ImGui.Spacing()
+            ImGui.Separator()
+            ImGui.Spacing()
+        end
+
+        function Gui.SubHeader(Text)
+            Gui.TextDisabled(tostring(Text or ""))
+            Gui.Separator()
+        end
+
         function Gui.Spacing(Count)
             local N = tonumber(Count) or 1
             for _ = 1, N do ImGui.Spacing() end
@@ -83,16 +128,6 @@
             Gui.SameLine()
             Gui.TextDisabled(Icon("Info"))
             Gui.Tooltip(Text)
-        end
-
-        function Gui.Section(Title, BodyFn)
-            if DrawSectionHeader then
-                DrawSectionHeader(Title)
-            else
-                Gui.Text(Title)
-                Gui.Separator()
-            end
-            SafeCall(BodyFn)
         end
 
     --> Close
@@ -190,6 +225,11 @@
             return false
         end
 
+        function Gui.IconButton(IconName, IdSuffix, Size, TooltipText, OnClick)
+            local Label = Icon(IconName) .. "##" .. tostring(IdSuffix or IconName)
+            return Gui.Button(Label, Size or ImVec2(0, 0), OnClick, TooltipText)
+        end
+
         function Gui.Toggle(Label, StateTable, Key, TooltipText)
             local Changed, Val = ImGui.Checkbox(Label, StateTable[Key] == true)
             if Changed then StateTable[Key] = Val end
@@ -207,6 +247,92 @@
             Gui.Tooltip(TooltipText)
             return false, StateTable[Key]
         end
+
+        function Gui.WorldButton(Label, Size, RequiresWorld, OnClick, TipTitle, TipDesc)
+            local NeedWorld = (RequiresWorld == true)
+            local CanClick = (not NeedWorld) or (GetWorld() ~= nil)
+
+            if not CanClick then ImGui.BeginDisabled() end
+            local Clicked = Gui.Button(Label, Size or ImVec2(0, 23), OnClick)
+            if not CanClick then
+                ImGui.EndDisabled()
+
+                ImGui.SetCursorScreenPos(ImGui.GetItemRectMin())
+                ImGui.InvisibleButton("##WorldHover_" .. tostring(Label), ImGui.GetItemRectSize())
+                if ImGui.IsItemHovered() then
+                    ImGui.BeginTooltip()
+                    ImGui.TextColored(ImVec4(1.0, 0.8, 0.2, 1.0), tostring(TipTitle or (Icon("Exclamation") .. " World Required")))
+                    ImGui.Separator()
+                    ImGui.Text(tostring(TipDesc or "This feature requires you to be inside a Growtopia world."))
+                    ImGui.EndTooltip()
+                end
+            end
+
+            return Clicked, CanClick
+        end
+
+        function Gui.Checkbox(Label, Value, OnChange, TooltipText)
+            local Changed, NewValue = ImGui.Checkbox(tostring(Label or ""), Value == true)
+            if Changed and type(OnChange) == "function" then
+                OnChange(NewValue)
+            end
+            Gui.Tooltip(TooltipText)
+            return Changed, NewValue
+        end
+
+        function Gui.ToggleKey(Label, StateTable, Key, TooltipText, OnChange)
+            if type(StateTable) ~= "table" then return false, false end
+            local Current = (StateTable[Key] == true)
+
+            local Changed, NewValue = ImGui.Checkbox(tostring(Label or ""), Current)
+            if Changed then
+                StateTable[Key] = NewValue
+                if type(OnChange) == "function" then OnChange(NewValue) end
+            end
+
+            Gui.Tooltip(TooltipText)
+            return Changed, NewValue
+        end
+
+        function Gui.CheatToggle(OptionName, TooltipText, OnChange)
+            if not Cheats or type(OptionName) ~= "string" then return false, false end
+
+            local Changed, NewValue = ImGui.Checkbox(OptionName, Cheats[OptionName] == true)
+            if Changed then
+                Cheats[OptionName] = NewValue
+                if type(OnChange) == "function" then OnChange(NewValue) end
+            end
+
+            Gui.Tooltip(TooltipText)
+            return Changed, NewValue
+        end
+
+        function Gui.CheatRadioGroup(OptionList, SelectedName, TooltipText)
+            if not Cheats or type(OptionList) ~= "table" then return false, SelectedName end
+
+            local ChangedAny = false
+
+            for _, Name in ipairs(OptionList) do
+                if type(Name) == "string" then
+                    local Current = (Cheats[Name] == true)
+                    local Changed, NewValue = ImGui.Checkbox(Name, Current)
+
+                    if Changed then
+                        for _, Other in ipairs(OptionList) do
+                            if type(Other) == "string" then Cheats[Other] = false end
+                        end
+                        Cheats[Name] = NewValue
+                        ChangedAny = true
+                        SelectedName = (NewValue and Name) or SelectedName
+                    end
+
+                    Gui.Tooltip(TooltipText)
+                end
+            end
+
+            return ChangedAny, SelectedName
+        end
+
 
     --> Close
 
@@ -245,6 +371,27 @@
             if Changed then StateTable[Key] = Val end
             Gui.Tooltip(TooltipText)
             return Changed, Val
+        end
+
+        function Gui.ClampIntInput(Label, StateTable, Key, Min, Max, Step, StepFast, TooltipText)
+            if type(StateTable) ~= "table" then return false, 0 end
+            local Current = tonumber(StateTable[Key] or 0) or 0
+
+            local Changed, NewValue = ImGui.InputInt(Label, Current, Step or 1, StepFast or 5)
+            if ImGui.IsItemActive() and Max and NewValue > Max then
+                ImGui.BeginTooltip()
+                ImGui.TextColored(ImVec4(1.0, 0.3, 0.3, 1.0), Icon("Ban") .. " Maximum value is " .. tostring(Max) .. "!")
+                ImGui.EndTooltip()
+            end
+
+            if Changed then
+                if Min ~= nil then NewValue = math.max(Min, NewValue) end
+                if Max ~= nil then NewValue = math.min(Max, NewValue) end
+                StateTable[Key] = NewValue
+            end
+
+            Gui.Tooltip(TooltipText)
+            return Changed, StateTable[Key]
         end
 
     --> Close
@@ -431,5 +578,5 @@
         end
     
     --> Close
-    
+
 --> Close
