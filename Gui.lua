@@ -12,6 +12,20 @@
 
     --> Basic
 
+        function Gui.ToggleCheatNames(Names, ConfigMapping)
+            for _, OptionName in ipairs(Names or {}) do
+                if Cheats and Cheats[OptionName] ~= nil then
+                    local NewValue = not Cheats[OptionName]
+                    Cheats[OptionName] = NewValue
+
+                    local ConfigKey = ConfigMapping and ConfigMapping[OptionName]
+                    if ConfigKey and ChangeValue then
+                        ChangeValue(ConfigKey, NewValue)
+                    end
+                end
+            end
+        end
+
         function Gui.CheatToggleMapped(OptionName, ConfigKey, TooltipText)
             if type(OptionName) ~= "string" then return false, false end
 
