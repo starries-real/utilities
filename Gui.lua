@@ -161,11 +161,12 @@
         end
 
         function Gui.Header(Text)
-            ImGui.Text(Text)
-            ImGui.Spacing()
+            ImGui.Text(tostring(Text or ""))
+            Gui.Spacing(1)
             ImGui.Separator()
-            ImGui.Spacing()
+            Gui.Spacing(1)
         end
+
 
         function Gui.SubHeader(Text)
             Gui.TextDisabled(tostring(Text or ""))
@@ -195,7 +196,7 @@
             end
         end
 
-        function Gui.AlignTextToFramePadding()
+        function Gui.AlignText()
             ImGui.AlignTextToFramePadding()
         end
 
@@ -239,11 +240,12 @@
             end
         end
 
-        function Gui.HelpMarker(Text)
-            Gui.SameLine()
+        function Gui.HelpMarker(Text, NoSameLine)
+            if not NoSameLine then Gui.SameLine() end
             Gui.TextDisabled(Icon("Info"))
             Gui.Tooltip(Text)
         end
+
 
     --> Close
 
@@ -283,19 +285,22 @@
 
     --> Layout Helpers
 
-        -- Label on Left, Control on Right
         function Gui.LabeledRow(Label, ControlFn, LabelWidth, ControlWidth)
             local LW = LabelWidth or 140
             Gui.AlignTextToFramePadding()
-            ImGui.PushItemWidth(ControlWidth or -1)
 
             ImGui.Text(tostring(Label or ""))
-            Gui.SameLine(LW)
+            Gui.SameLine()
 
+            if LW > 0 then
+                ImGui.SetCursorPosX(ImGui.GetCursorPosX() + LW)
+            end
+
+            if ControlWidth then ImGui.PushItemWidth(ControlWidth) end
             SafeCall(ControlFn)
-
-            ImGui.PopItemWidth()
+            if ControlWidth then ImGui.PopItemWidth() end
         end
+
 
         function Gui.Child(Id, Size, Border, BodyFn)
             local Open = ImGui.BeginChild(Id, Size or ImVec2(0, 0), Border == true)
@@ -453,11 +458,8 @@
 
     --> Inputs
 
-        function Gui.InputText(Label, StateTable, Key, Flags, TooltipText)
-            local Changed, Val = ImGui.InputText(Label, tostring(StateTable[Key] or ""), Flags or 0)
-            if Changed then StateTable[Key] = Val end
-            Gui.Tooltip(TooltipText)
-            return Changed, Val
+        function Gui.InputText(Label, StateTable, Key, MaxLen, Flags, TooltipText)
+            return Gui.InputTextKey(Label, StateTable, Key, MaxLen or 256, nil, Flags, TooltipText)
         end
 
         function Gui.InputInt(Label, StateTable, Key, Step, StepFast, Flags, TooltipText)
