@@ -12,6 +12,66 @@
 
     --> Basic
 
+        function Gui.CheatToggleMapped(OptionName, ConfigKey, TooltipText)
+            if type(OptionName) ~= "string" then return false, false end
+
+            local CurrentValue = false
+
+            if ConfigKey and GetValue then
+                if OptionName == "Anti Lag" then
+                    local Particle = GetValue("[C] No render particle") or false
+                    local Shadow   = GetValue("[C] No render shadow") or false
+                    local Name     = GetValue("[C] No render name") or false
+                    CurrentValue = (Particle and Shadow and Name) == true
+                else
+                    CurrentValue = (GetValue(ConfigKey) or false) == true
+                end
+            else
+                CurrentValue = (Cheats and Cheats[OptionName] == true) or false
+            end
+
+            local Changed, NewValue = ImGui.Checkbox(OptionName, CurrentValue)
+            if not Changed then
+                Gui.Tooltip(TooltipText)
+                return false, CurrentValue
+            end
+
+            if ConfigKey and ChangeValue then
+                if OptionName == "Anti Lag" then
+                    ChangeValue("[C] No render particle", NewValue)
+                    ChangeValue("[C] No render shadow", NewValue)
+                    ChangeValue("[C] No render name", NewValue)
+                else
+                    ChangeValue(ConfigKey, NewValue)
+                end
+            end
+
+            if Cheats then Cheats[OptionName] = NewValue end
+            Gui.Tooltip(TooltipText)
+            return true, NewValue
+        end
+
+        function Gui.SetCheatListMapped(OptionList, Enable, ConfigMapping)
+            if not Cheats or type(OptionList) ~= "table" then return end
+
+            for _, OptionName in ipairs(OptionList) do
+                if type(OptionName) == "string" then
+                    Cheats[OptionName] = Enable
+
+                    local ConfigKey = ConfigMapping and ConfigMapping[OptionName]
+                    if ConfigKey and ChangeValue then
+                        if OptionName == "Anti Lag" then
+                            ChangeValue("[C] No render particle", Enable)
+                            ChangeValue("[C] No render shadow", Enable)
+                            ChangeValue("[C] No render name", Enable)
+                        else
+                            ChangeValue(ConfigKey, Enable)
+                        end
+                    end
+                end
+            end
+        end
+
         function Gui.CleanLabel(Label)
             return tostring(Label or "")
                 :gsub("^[^\x20-\x7E]+", "")
