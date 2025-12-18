@@ -1,5 +1,5 @@
 return {
-    Version = 2,
+    Version = 1,
     Updated = "18-12-2025",
     Theme = {
         Presets = {
