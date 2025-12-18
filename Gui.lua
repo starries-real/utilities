@@ -12,6 +12,47 @@
 
     --> Basic
 
+        function Gui.RadioGroupKey(Options, StateTable, Key)
+            for i, Name in ipairs(Options or {}) do
+                if ImGui.RadioButton(Name, StateTable[Key] == Name) then
+                    StateTable[Key] = Name
+                end
+                if i < #Options then Gui.SameLine() end
+            end
+        end
+
+        function Gui.InputTextKey(Label, StateTable, Key, MaxLen, Width, Flags)
+            if type(StateTable) ~= "table" or not Key then return false, "" end
+                StateTable[Key] = tostring(StateTable[Key] or "")
+                local Buffer = StateTable[Key]
+                    if Width then ImGui.PushItemWidth(Width) end
+                    local Changed, NewText = ImGui.InputText(
+                        Label,
+                        Buffer,
+                        MaxLen or 256,
+                        Flags or 0
+                    )
+                if Width then ImGui.PopItemWidth() end
+                if Changed then StateTable[Key] = NewText end
+            return Changed, StateTable[Key]
+        end
+
+        function Gui.RowButtons(Buttons, DefaultSize)
+            for Index, Btn in ipairs(Buttons or {}) do
+                if Index > 1 then
+                    Gui.SameLine()
+                end
+
+                local Size = Btn.Size or DefaultSize or ImVec2(0, 23)
+                Gui.Button(
+                    tostring(Btn.Label or "Button"),
+                    Size,
+                    Btn.OnClick,
+                    Btn.Tooltip
+                )
+            end
+        end
+
         function Gui.ToggleCheatNames(Names, ConfigMapping)
             for _, OptionName in ipairs(Names or {}) do
                 if Cheats and Cheats[OptionName] ~= nil then
