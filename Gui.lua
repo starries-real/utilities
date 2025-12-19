@@ -287,7 +287,7 @@
 
         function Gui.LabeledRow(Label, ControlFn, LabelWidth, ControlWidth)
             local LW = LabelWidth or 140
-            Gui.AlignTextToFramePadding()
+            Gui.AlignText()
 
             ImGui.Text(tostring(Label or ""))
             Gui.SameLine()
