@@ -304,6 +304,31 @@
 
     --> Layout Helpers
 
+        function Gui.ProgressBar(Value, Size, Overlay)
+            local Fraction = tonumber(Value) or 0.0
+            if Fraction < 0 then Fraction = 0 end
+            if Fraction > 1 then Fraction = 1 end
+        
+            local BarSize = Size
+            if BarSize == nil then
+                -- Default: full width available, height follow ImGui default
+                local Avail = ImGui.GetContentRegionAvail()
+                BarSize = ImVec2(Avail.x, 0)
+            end
+        
+            local Label = Overlay
+            if Label == nil then
+                Label = string.format("%d%%", math.floor((Fraction * 100) + 0.5))
+            end
+        
+            ImGui.ProgressBar(Fraction, BarSize, Label)
+        end
+
+        function Gui.ProgressBarFullWidth(Value, Height, Overlay)
+            local Avail = ImGui.GetContentRegionAvail()
+            Gui.ProgressBar(Value, ImVec2(Avail.x, tonumber(Height) or 0), Overlay)
+        end
+
         function Gui.IsAllEnabledFromLists(Lists)
             if not Cheats then return false end
             for _, List in ipairs(Lists or {}) do
