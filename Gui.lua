@@ -12,6 +12,15 @@
 
     --> Basic
 
+        function Gui.Paragraph(Text, Width, Indent)
+            Indent = Indent or 6
+            Gui.Indent(Indent)
+            ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + (Width or 260))
+            Gui.TextWrapped(tostring(Text or ""))
+            ImGui.PopTextWrapPos()
+            Gui.Unindent(Indent)
+        end
+
         function Gui.RadioGroupKey(Options, StateTable, Key, IdSuffix)
             IdSuffix = tostring(IdSuffix or "")
             for i, Name in ipairs(Options or {}) do
