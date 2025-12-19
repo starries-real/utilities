@@ -227,6 +227,10 @@
             if W then ImGui.Unindent(W) else ImGui.Unindent() end
         end
 
+        function Gui.IconText(IconName, Text)
+            return string.format("%s %s", Icon(IconName), tostring(Text or ""))
+        end
+
         function Gui.Text(Text)
             ImGui.Text(tostring(Text or ""))
         end
@@ -393,11 +397,37 @@
                 SafeCall(RightFn)
             end)
         end
+
+        function Gui.Spinner(IconName, Speed)
+            -- Speed: rad/s feel
+            local S = tonumber(Speed) or 8.0
+            local T = (ImGui.GetTime and ImGui.GetTime() or os.clock())
+            local Phase = math.floor((T * S) % 4)
+        
+            -- 4-phase pseudo spinner: | / - \
+            local Frames = { "|", "/", "-", "\\" }
+            Gui.TextDisabled(Gui.IconText(IconName, Frames[Phase + 1]))
+        end
     
     --> Close
 
     --> Buttons / Toggles
+
+        function Gui.TwoButtons(LeftLabel, RightLabel, Height, Gap, OnLeft, OnRight)
+            local H = tonumber(Height) or 23
+            local G = tonumber(Gap) or 10
         
+            local AvailW = ImGui.GetContentRegionAvail().x
+            if AvailW < 50 then AvailW = 50 end
+        
+            local BtnW = (AvailW - G) * 0.5
+            if BtnW < 10 then BtnW = 10 end
+        
+            if Gui.Button(LeftLabel, ImVec2(BtnW, H), OnLeft) then end
+            ImGui.SameLine(0, G)
+            if Gui.Button(RightLabel, ImVec2(BtnW, H), OnRight) then end
+        end
+
         function Gui.ToggleAllButton(Lists, OnLabel, OffLabel, Size, OnToggle)
             local AllEnabled = Gui.IsAllEnabledFromLists(Lists)
         
