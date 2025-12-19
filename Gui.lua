@@ -12,9 +12,15 @@
 
     --> Basic
 
-        function Gui.RadioGroupKey(Options, StateTable, Key)
+        function Gui.RadioGroupKey(Options, StateTable, Key, IdSuffix)
+            IdSuffix = tostring(IdSuffix or "")
             for i, Name in ipairs(Options or {}) do
-                if ImGui.RadioButton(Name, StateTable[Key] == Name) then
+                local Label = tostring(Name)
+                if IdSuffix ~= "" then
+                    Label = Label .. "##" .. IdSuffix .. "_" .. tostring(i)
+                end
+        
+                if ImGui.RadioButton(Label, StateTable[Key] == Name) then
                     StateTable[Key] = Name
                 end
                 if i < #Options then Gui.SameLine() end
