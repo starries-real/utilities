@@ -285,6 +285,33 @@
 
     --> Layout Helpers
 
+        function Gui.IsAllEnabledFromLists(Lists)
+            if not Cheats then return false end
+            for _, List in ipairs(Lists or {}) do
+                if type(List) == "table" then
+                    for _, Name in ipairs(List) do
+                        if type(Name) == "string" and not Cheats[Name] then
+                            return false
+                        end
+                    end
+                end
+            end
+            return true
+        end
+
+        function Gui.SetAllFromLists(Lists, Enable)
+            if not Cheats then return end
+            for _, List in ipairs(Lists or {}) do
+                if type(List) == "table" then
+                    for _, Name in ipairs(List) do
+                        if type(Name) == "string" then
+                            Cheats[Name] = (Enable == true)
+                        end
+                    end
+                end
+            end
+        end
+
         function Gui.LabeledRow(Label, ControlFn, LabelWidth, ControlWidth)
             local LW = LabelWidth or 140
             Gui.AlignText()
@@ -326,6 +353,26 @@
     --> Close
 
     --> Buttons / Toggles
+        
+        function Gui.ToggleAllButton(Lists, OnLabel, OffLabel, Size, OnToggle)
+            local AllEnabled = Gui.IsAllEnabledFromLists(Lists)
+        
+            local Label =
+                (AllEnabled and Icon("ToggleOff") or Icon("ToggleOn")) ..
+                " " ..
+                (AllEnabled and (OffLabel or "Disable All") or (OnLabel or "Enable All"))
+        
+            Gui.Button(Label, Size or ImVec2(0, 23), function()
+                local Enable = not AllEnabled
+                if type(OnToggle) == "function" then
+                    OnToggle(Enable, AllEnabled)
+                else
+                    Gui.SetAllFromLists(Lists, Enable)
+                end
+            end)
+        
+            return AllEnabled
+        end
 
         function Gui.Button(Label, Size, OnClick, TooltipText)
             if ImGui.Button(Label, Size or ImVec2(0, 0)) then
