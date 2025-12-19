@@ -222,6 +222,10 @@
             ImGui.Text(tostring(Text or ""))
         end
 
+        function Gui.TextWrapped(Text)
+            ImGui.TextWrapped(tostring(Text or ""))
+        end
+
         function Gui.TextUnformatted(Text)
             ImGui.TextUnformatted(tostring(Text or ""))
         end
