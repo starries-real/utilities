@@ -12,6 +12,50 @@
 
     --> Basic
 
+        function Gui.BadgePill(Text, Width, Height, BgCol, TextCol)
+            local W = tonumber(Width) or 100
+            local H = tonumber(Height) or 18
+        
+            local P0 = ImGui.GetCursorScreenPos()
+            local P1 = ImVec2(P0.x + W, P0.y + H)
+        
+            local DL = ImGui.GetWindowDrawList()
+            local R = H * 0.5
+        
+            local Bg = BgCol or ImVec4(0.15, 0.45, 0.55, 0.90)
+            local Tc = TextCol or ImVec4(0.85, 0.95, 1.00, 1.00)
+        
+            if DL and ImGui.ColorConvertFloat4ToU32 then
+                DL:AddRectFilled(P0, P1, ImGui.ColorConvertFloat4ToU32(Bg), R)
+                -- Text position (no CalcTextSize): left padding + vertical tweak
+                DL:AddText(ImVec2(P0.x + 8, P0.y + (H * 0.5) - 7), ImGui.ColorConvertFloat4ToU32(Tc), tostring(Text or ""))
+                ImGui.Dummy(ImVec2(W, H))
+            else
+                -- Fallback if drawlist not available
+                Gui.TextColored(Tc, tostring(Text or ""))
+            end
+        end
+        
+        function Gui.Stepper(CurrentStep)
+            local Steps = { "Design", "Build", "Test", "Ship" }
+            local Step = tonumber(CurrentStep) or 2
+            if Step < 1 then Step = 1 end
+            if Step > #Steps then Step = #Steps end
+        
+            for i, Name in ipairs(Steps) do
+                local Active = (i <= Step)
+                local Col = Active and ImVec4(0.40, 0.85, 1.00, 1.00) or ImVec4(0.55, 0.55, 0.55, 1.00)
+                local Dot = Active and "● " or "○ "
+                Gui.TextColored(Col, Dot .. Name)
+        
+                if i < #Steps then
+                    ImGui.SameLine()
+                    Gui.TextDisabled("  ─  ")
+                    ImGui.SameLine()
+                end
+            end
+        end
+
         function Gui.Paragraph(Text, Width, Indent)
             Indent = Indent or 6
             Gui.Indent(Indent)
