@@ -40,24 +40,33 @@
             local W = tonumber(Width) or 100
             local H = tonumber(Height) or 18
         
-            local P0 = ImGui.GetCursorScreenPos()
-            local P1 = ImVec2(P0.x + W, P0.y + H)
-        
-            local DL = ImGui.GetWindowDrawList()
-            local R = H * 0.5
-        
             local Bg = BgCol or ImVec4(0.15, 0.45, 0.55, 0.90)
             local Tc = TextCol or ImVec4(0.85, 0.95, 1.00, 1.00)
         
-            if DL and ImGui.ColorConvertFloat4ToU32 then
-                DL:AddRectFilled(P0, P1, ImGui.ColorConvertFloat4ToU32(Bg), R)
-                -- Text position (no CalcTextSize): left padding + vertical tweak
-                DL:AddText(ImVec2(P0.x + 8, P0.y + (H * 0.5) - 7), ImGui.ColorConvertFloat4ToU32(Tc), tostring(Text or ""))
+            -- Cek drawlist API DULU
+            local GetDL = ImGui.GetWindowDrawList
+            local ToU32 = ImGui.ColorConvertFloat4ToU32
+        
+            if GetDL and ToU32 then
+                local P0 = ImGui.GetCursorScreenPos()
+                local P1 = ImVec2(P0.x + W, P0.y + H)
+        
+                local DL = GetDL()
+                local R = H * 0.5
+        
+                DL:AddRectFilled(P0, P1, ToU32(Bg), R)
+        
+                DL:AddText(
+                    ImVec2(P0.x + 8, P0.y + (H * 0.5) - 7),
+                    ToU32(Tc),
+                    tostring(Text or "")
+                )
+        
                 ImGui.Dummy(ImVec2(W, H))
-            else
-                -- Fallback if drawlist not available
-                Gui.TextColored(Tc, tostring(Text or ""))
+                return
             end
+        
+            Gui.TextColored(Tc, tostring(Text or ""))
         end
         
         function Gui.Stepper(CurrentStep)
