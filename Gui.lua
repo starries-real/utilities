@@ -43,10 +43,10 @@
             local Bg = BgCol or ImVec4(0.15, 0.45, 0.55, 0.90)
             local Tc = TextCol or ImVec4(0.85, 0.95, 1.00, 1.00)
         
-            ImGui.PushStyleColor(ImGuiCol.Button, Bg)
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, Bg)
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, Bg)
-            ImGui.PushStyleColor(ImGuiCol.Text, Tc)
+            ImGui.PushStyleColor(ImGui.Col.Button, Bg)
+            ImGui.PushStyleColor(ImGui.Col.ButtonHovered, Bg)
+            ImGui.PushStyleColor(ImGui.Col.ButtonActive, Bg)
+            ImGui.PushStyleColor(ImGui.Col.Text, Tc)
         
             ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, H * 0.5)
             ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, ImVec2(8, 2))
