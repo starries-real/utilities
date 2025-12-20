@@ -43,30 +43,18 @@
             local Bg = BgCol or ImVec4(0.15, 0.45, 0.55, 0.90)
             local Tc = TextCol or ImVec4(0.85, 0.95, 1.00, 1.00)
         
-            -- Cek drawlist API DULU
-            local GetDL = ImGui.GetWindowDrawList
-            local ToU32 = ImGui.ColorConvertFloat4ToU32
+            ImGui.PushStyleColor(ImGuiCol.Button, Bg)
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, Bg)
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive, Bg)
+            ImGui.PushStyleColor(ImGuiCol.Text, Tc)
         
-            if GetDL and ToU32 then
-                local P0 = ImGui.GetCursorScreenPos()
-                local P1 = ImVec2(P0.x + W, P0.y + H)
+            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, H * 0.5)
+            ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, ImVec2(8, 2))
         
-                local DL = GetDL()
-                local R = H * 0.5
+            ImGui.Button(tostring(Text or ""), ImVec2(W, H))
         
-                DL:AddRectFilled(P0, P1, ToU32(Bg), R)
-        
-                DL:AddText(
-                    ImVec2(P0.x + 8, P0.y + (H * 0.5) - 7),
-                    ToU32(Tc),
-                    tostring(Text or "")
-                )
-        
-                ImGui.Dummy(ImVec2(W, H))
-                return
-            end
-        
-            Gui.TextColored(Tc, tostring(Text or ""))
+            ImGui.PopStyleVar(2)
+            ImGui.PopStyleColor(4)
         end
         
         function Gui.Stepper(CurrentStep)
