@@ -12,6 +12,30 @@
 
     --> Basic
 
+        function Gui.SetToast(Text, DurationSec)
+            local Now = (ImGui.GetTime and ImGui.GetTime()) or os.clock()
+            Variable.Ui.BlankToastUntil = Now + (tonumber(DurationSec) or 2.0)
+            Variable.Ui.BlankToastText = tostring(Text or "")
+        end
+        
+        function Gui.DrawToastLine()
+            local Now = (ImGui.GetTime and ImGui.GetTime()) or os.clock()
+            if Now < (Variable.Ui.BlankToastUntil or 0) then
+                Gui.TextColored(ImVec4(0.40, 1.00, 0.40, 1.00), Variable.Ui.BlankToastText or "")
+                return true
+            end
+            return false
+        end
+        
+        function Gui.AnimatedDots(Speed)
+            local Now = (ImGui.GetTime and ImGui.GetTime()) or os.clock()
+            local Phase = math.floor((Now * (tonumber(Speed) or 2.0)) % 4)
+            if Phase == 0 then return "" end
+            if Phase == 1 then return "." end
+            if Phase == 2 then return ".." end
+            return "..."
+        end
+
         function Gui.BadgePill(Text, Width, Height, BgCol, TextCol)
             local W = tonumber(Width) or 100
             local H = tonumber(Height) or 18
