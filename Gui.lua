@@ -83,29 +83,37 @@
         end
 
         function Gui.CheatToggleMapped(OptionName, ConfigKey, TooltipText)
-            if type(OptionName) ~= "string" then return false, false end
-
+            if type(OptionName) ~= "string" then
+                return false, false
+            end
+        
             local CurrentValue = false
-
+        
             if ConfigKey and GetValue then
                 if OptionName == "Anti Lag" then
-                    local Particle = GetValue("[C] No render particle") or false
-                    local Shadow   = GetValue("[C] No render shadow") or false
-                    local Name     = GetValue("[C] No render name") or false
-                    CurrentValue = (Particle and Shadow and Name) == true
+                    local Particle = (GetValue("[C] No render particle") or false) == true
+                    local Shadow   = (GetValue("[C] No render shadow") or false) == true
+                    local Name     = (GetValue("[C] No render name") or false) == true
+                    CurrentValue = (Particle and Shadow and Name)
                 else
                     CurrentValue = (GetValue(ConfigKey) or false) == true
                 end
             else
                 CurrentValue = (Cheats and Cheats[OptionName] == true) or false
             end
-
+        
             local Changed, NewValue = ImGui.Checkbox(OptionName, CurrentValue)
+        
+            if TooltipText and TooltipText ~= "" then
+                if ImGui.IsItemHovered() then
+                    Gui.Tooltip(TooltipText)
+                end
+            end
+        
             if not Changed then
-                Gui.Tooltip(TooltipText)
                 return false, CurrentValue
             end
-
+        
             if ConfigKey and ChangeValue then
                 if OptionName == "Anti Lag" then
                     ChangeValue("[C] No render particle", NewValue)
@@ -115,9 +123,11 @@
                     ChangeValue(ConfigKey, NewValue)
                 end
             end
-
-            if Cheats then Cheats[OptionName] = NewValue end
-            Gui.Tooltip(TooltipText)
+        
+            if Cheats then
+                Cheats[OptionName] = NewValue
+            end
+        
             return true, NewValue
         end
 
