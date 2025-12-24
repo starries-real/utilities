@@ -630,6 +630,8 @@
                 ImGui.BeginTooltip()
                 ImGui.TextColored(ImVec4(1.0, 0.3, 0.3, 1.0), Icon("Ban") .. " Maximum value is " .. tostring(Max) .. "!")
                 ImGui.EndTooltip()
+            else
+                Gui.Tooltip(TooltipText)
             end
 
             if Changed then
@@ -638,7 +640,6 @@
                 StateTable[Key] = NewValue
             end
 
-            Gui.Tooltip(TooltipText)
             return Changed, StateTable[Key]
         end
 
