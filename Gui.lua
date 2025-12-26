@@ -1194,3 +1194,91 @@ local function WorldRequiredButton(Label, Size, IsAllowed, OnClick, TipTitle, Ti
 end --> Button that disables itself when not allowed, with hover tooltip explaining requirement
 
 --> Close
+
+--> Renderer
+
+local function DrawTwoPanelMappedTab(Spec)
+    local Data = Spec.Data()
+    if not Data then return end
+
+    DrawSubTabRoot("##"..Spec.Id, Spec.Title, function()
+
+        -- ===== Panels =====
+        Gui.Columns(2, "##"..Spec.Id.."Cols", false, function()
+
+            -- Left
+            DrawPanel("##"..Spec.Id.."Main", Spec.LeftTitle, 207, function()
+                for _, Name in ipairs(Data.Feature or {}) do
+                    Gui.CheatToggleMapped(Name, Spec.Mapping[Name])
+                end
+            end)
+
+            ImGui.NextColumn()
+
+            -- Right
+            DrawPanel("##"..Spec.Id.."More", Spec.RightTitle, 207, function()
+                for _, Name in ipairs(Data.More or {}) do
+                    Gui.CheatToggleMapped(Name, Spec.Mapping[Name])
+                end
+            end)
+        end)
+
+        Gui.Spacing()
+
+        -- ===== Footer =====
+        Gui.Child("##"..Spec.Id.."Footer", ImVec2(ImGui.GetColumnWidth() - 4, 0), true, function()
+            Gui.Header(Icon("Asterisk") .. " Quick Controls:")
+
+            local AllEnabled = IsAllEnabledFromLists({ Data.Feature, Data.More })
+            local Enable = not AllEnabled
+
+            Gui.Button(
+                (AllEnabled and Icon("ToggleOff") or Icon("ToggleOn")) ..
+                (Enable and " Enable All" or " Disable All"),
+                ImVec2(0, 23),
+                function()
+                    RunThread(function()
+                        ToggleAllMapped({ Data.Feature, Data.More }, Enable, Spec.Mapping)
+                    end)
+                end
+            )
+
+            if Spec.ExtraFooter then
+                Gui.SameLine()
+                Spec.ExtraFooter(Data)
+            end
+        end)
+    end)
+end
+
+local function DrawTwoPanelSlots(Spec)
+
+    local Id = tostring(Spec.Id or "TwoPanel")
+    local Title = tostring(Spec.Title or "Untitled")
+
+    local L = Spec.Left or {}
+    local R = Spec.Right or {}
+
+    DrawSubTabRoot("##" .. Id .. "Root", Title, function()
+        Gui.Columns(2, "##" .. Id .. "Cols", false, function()
+            DrawPanel("##" .. (L.Id or (Id .. "Left")), L.Title or "", L.Height or 207, function()
+                if type(L.BodyFn) == "function" then L.BodyFn() end
+            end)
+
+            ImGui.NextColumn()
+
+            DrawPanel("##" .. (R.Id or (Id .. "Right")), R.Title or "", R.Height or 207, function()
+                if type(R.BodyFn) == "function" then R.BodyFn() end
+            end)
+        end)
+
+        if Spec.Footer and type(Spec.Footer.BodyFn) == "function" then
+            Gui.Spacing()
+            Gui.Child("##" .. (Spec.Footer.Id or (Id .. "Footer")), ImVec2(ImGui.GetColumnWidth() - 4, 0), true, function()
+                Spec.Footer.BodyFn()
+            end)
+        end
+    end)
+end
+
+--> Close
