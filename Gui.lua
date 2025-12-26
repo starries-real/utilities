@@ -499,26 +499,45 @@
             return false, StateTable[Key]
         end
 
-        function Gui.WorldButton(Label, Size, RequiresWorld, OnClick, TipTitle, TipDesc)
-            local NeedWorld = (RequiresWorld == true)
-            local CanClick = (not NeedWorld) or (GetWorld() ~= nil)
-
-            if not CanClick then ImGui.BeginDisabled() end
+        function Gui.WorldButton(Label, Size, IsDisabled, OnClick, TooltipText)
+            local CanClick = not IsDisabled
+            
+            if not CanClick then 
+                ImGui.BeginDisabled() 
+            end
+            
             local Clicked = Gui.Button(Label, Size or ImVec2(0, 23), OnClick)
+            
             if not CanClick then
                 ImGui.EndDisabled()
-
-                ImGui.SetCursorScreenPos(ImGui.GetItemRectMin())
-                ImGui.InvisibleButton("##WorldHover_" .. tostring(Label), ImGui.GetItemRectSize())
-                if ImGui.IsItemHovered() then
-                    ImGui.BeginTooltip()
-                    ImGui.TextColored(ImVec4(1.0, 0.8, 0.2, 1.0), tostring(TipTitle or (Icon("Exclamation") .. " World Required")))
-                    ImGui.Separator()
-                    ImGui.Text(tostring(TipDesc or "This feature requires you to be inside a Growtopia world."))
-                    ImGui.EndTooltip()
+                
+                if TooltipText and TooltipText ~= "" then
+                    ImGui.SetCursorScreenPos(ImGui.GetItemRectMin())
+                    ImGui.InvisibleButton("##WorldHover_" .. tostring(Label), ImGui.GetItemRectSize())
+                    if ImGui.IsItemHovered() then
+                        ImGui.BeginTooltip()
+                        local lines = {}
+                        for line in TooltipText:gmatch("[^\n]+") do
+                            table.insert(lines, line)
+                        end
+                        
+                        if #lines > 0 then
+                            if lines[1]:find(Icon("Exclamation")) or lines[1]:find("World Required") then
+                                ImGui.TextColored(ImVec4(1.0, 0.8, 0.2, 1.0), lines[1])
+                            else
+                                ImGui.Text(lines[1])
+                            end
+                        end
+                        
+                        for i = 2, #lines do
+                            if i == 2 then ImGui.Separator() end
+                            ImGui.Text(lines[i])
+                        end
+                        ImGui.EndTooltip()
+                    end
                 end
             end
-
+            
             return Clicked, CanClick
         end
 
