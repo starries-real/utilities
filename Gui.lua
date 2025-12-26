@@ -18,7 +18,7 @@ local GuiState = {
 }
 
 -- \ Safe Call dengan Error Reporting
-local function SafeCall(Fn, Location, ...)
+function SafeCall(Fn, Location, ...)
     if type(Fn) ~= "function" then return end
     
     local Ok, Err = pcall(Fn, ...)
@@ -44,7 +44,7 @@ local function SafeCall(Fn, Location, ...)
 end
 
 -- \ Dimension Validation
-local function ValidateDimension(Value, Max, Min)
+function ValidateDimension(Value, Max, Min)
     Min = Min or 0
     Max = Max or 9999
     
@@ -57,7 +57,7 @@ local function ValidateDimension(Value, Max, Min)
     return Value
 end
 
-local function ValidateChildSize(Width, Height)
+function ValidateChildSize(Width, Height)
     local WorldX, WorldY = 100, 60
     if GetWorldSize then
         WorldX, WorldY = GetWorldSize()
@@ -74,7 +74,7 @@ local function ValidateChildSize(Width, Height)
 end
 
 -- \ Stack Cleanup Function
-local function CleanupGuiStack()
+function CleanupGuiStack()
     SafeCall(function()
         -- Pop colors
         if GuiState.ColorPushCount > 0 and ImGui.PopStyleColor then
@@ -1102,7 +1102,7 @@ end
 
 --> Helper Functions
 
-local function IsAllEnabledFromLists(Lists)
+function IsAllEnabledFromLists(Lists)
     for _, L in ipairs(Lists or {}) do
         for _, Name in ipairs(L or {}) do
             if type(Name) == "string" and not Cheats[Name] then
@@ -1113,7 +1113,7 @@ local function IsAllEnabledFromLists(Lists)
     return true
 end
 
-local function ToggleAllMapped(Lists, Enable, Mapping)
+function ToggleAllMapped(Lists, Enable, Mapping)
     for _, L in ipairs(Lists or {}) do
         for _, Name in ipairs(L or {}) do
             if type(Name) == "string" then
@@ -1127,7 +1127,7 @@ local function ToggleAllMapped(Lists, Enable, Mapping)
     end
 end
 
-local function ResolveMethod(Self, CleanName)
+function ResolveMethod(Self, CleanName)
     local Method = Self and Self[CleanName]
     if type(Method) == "function" then
         return function() Method(Self) end
@@ -1135,7 +1135,7 @@ local function ResolveMethod(Self, CleanName)
     return nil
 end --> Resolve method
 
-local function DrawSubTabs(Self, TabBarId, SubTabsList, DefaultTitle)
+function DrawSubTabs(Self, TabBarId, SubTabsList, DefaultTitle)
     SubTabsList = SubTabsList or {}
     Gui.TabBar(TabBarId, Gui.BuildTabs(
         SubTabsList,
@@ -1146,14 +1146,14 @@ local function DrawSubTabs(Self, TabBarId, SubTabsList, DefaultTitle)
 end
 --> Draw Sub Tabs easily
 
-local function CleanTabLabel(Label)
+function CleanTabLabel(Label)
     return tostring(Label or "")
         :gsub("^[^\x20-\x7E]+", "")
         :gsub("^%s+", "")
         :gsub("%s+$", "")
 end --> Clean label from non-printable prefix + trim spaces
 
-local function DrawSubTabRoot(TabId, Title, BodyFn)
+function DrawSubTabRoot(TabId, Title, BodyFn)
     if Gui.Header then
         Gui.Header(Title)
     else
@@ -1162,7 +1162,7 @@ local function DrawSubTabRoot(TabId, Title, BodyFn)
     return BodyFn()
 end --> Draw a sub-tab root title/header then run BodyFn
 
-local function DrawPanel(PanelId, Title, Height, BodyFn)
+function DrawPanel(PanelId, Title, Height, BodyFn)
     return Gui.Child(PanelId, ImVec2(0, Height or 207), true, function()
         if Gui.Header then
             Gui.Header(Title)
@@ -1173,7 +1173,7 @@ local function DrawPanel(PanelId, Title, Height, BodyFn)
     end)
 end --> Draw a titled child panel with fixed height and BodyFn content
 
-local function WorldRequiredButton(Label, Size, IsAllowed, OnClick, TipTitle, TipDesc)
+function WorldRequiredButton(Label, Size, IsAllowed, OnClick, TipTitle, TipDesc)
     if not IsAllowed then ImGui.BeginDisabled() end
     local WasClicked = Gui.Button(Label, Size or ImVec2(0, 23), OnClick)
     if IsAllowed then return WasClicked end
@@ -1197,7 +1197,7 @@ end --> Button that disables itself when not allowed, with hover tooltip explain
 
 --> Renderer
 
-local function DrawTwoPanelMappedTab(Spec)
+function DrawTwoPanelMappedTab(Spec)
     local Data = Spec.Data()
     if not Data then return end
 
@@ -1251,7 +1251,7 @@ local function DrawTwoPanelMappedTab(Spec)
     end)
 end
 
-local function DrawTwoPanelSlots(Spec)
+function DrawTwoPanelSlots(Spec)
 
     local Id = tostring(Spec.Id or "TwoPanel")
     local Title = tostring(Spec.Title or "Untitled")
