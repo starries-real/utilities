@@ -1099,3 +1099,98 @@ function Gui.RecoverStack()
 end
 
 --> Close
+
+--> Helper Functions
+
+local function IsAllEnabledFromLists(Lists)
+    for _, L in ipairs(Lists or {}) do
+        for _, Name in ipairs(L or {}) do
+            if type(Name) == "string" and not Cheats[Name] then
+                return false
+            end
+        end
+    end
+    return true
+end
+
+local function ToggleAllMapped(Lists, Enable, Mapping)
+    for _, L in ipairs(Lists or {}) do
+        for _, Name in ipairs(L or {}) do
+            if type(Name) == "string" then
+                Cheats[Name] = Enable
+                local Key = Mapping and Mapping[Name]
+                if Key and ChangeValue then
+                    ChangeValue(Key, Enable)
+                end
+            end
+        end
+    end
+end
+
+local function ResolveMethod(Self, CleanName)
+    local Method = Self and Self[CleanName]
+    if type(Method) == "function" then
+        return function() Method(Self) end
+    end
+    return nil
+end --> Resolve method
+
+local function DrawSubTabs(Self, TabBarId, SubTabsList, DefaultTitle)
+    SubTabsList = SubTabsList or {}
+    Gui.TabBar(TabBarId, Gui.BuildTabs(
+        SubTabsList,
+        DefaultTitle,
+        function(CleanName) return ResolveMethod(Self, CleanName) end,
+        function() DrawBlank(nil, "Secondary") end
+    ))
+end
+--> Draw Sub Tabs easily
+
+local function CleanTabLabel(Label)
+    return tostring(Label or "")
+        :gsub("^[^\x20-\x7E]+", "")
+        :gsub("^%s+", "")
+        :gsub("%s+$", "")
+end --> Clean label from non-printable prefix + trim spaces
+
+local function DrawSubTabRoot(TabId, Title, BodyFn)
+    if Gui.Header then
+        Gui.Header(Title)
+    else
+        Gui.Text(Title); Gui.Separator()
+    end
+    return BodyFn()
+end --> Draw a sub-tab root title/header then run BodyFn
+
+local function DrawPanel(PanelId, Title, Height, BodyFn)
+    return Gui.Child(PanelId, ImVec2(0, Height or 207), true, function()
+        if Gui.Header then
+            Gui.Header(Title)
+        else
+            Gui.Text(Title); Gui.Separator()
+        end
+        BodyFn()
+    end)
+end --> Draw a titled child panel with fixed height and BodyFn content
+
+local function WorldRequiredButton(Label, Size, IsAllowed, OnClick, TipTitle, TipDesc)
+    if not IsAllowed then ImGui.BeginDisabled() end
+    local WasClicked = Gui.Button(Label, Size or ImVec2(0, 23), OnClick)
+    if IsAllowed then return WasClicked end
+
+    ImGui.EndDisabled()
+    ImGui.SetCursorScreenPos(ImGui.GetItemRectMin())
+    ImGui.InvisibleButton("##Hover_" .. Label, ImGui.GetItemRectSize())
+
+    if ImGui.IsItemHovered() then
+        ImGui.BeginTooltip()
+        ImGui.TextColored(ImVec4(1.0, 0.8, 0.2, 1.0), TipTitle or "World Required")
+        ImGui.Separator()
+        ImGui.Text(tostring(TipDesc or "This feature requires you to be inside a Growtopia world."))
+        ImGui.EndTooltip()
+    end
+
+    return WasClicked
+end --> Button that disables itself when not allowed, with hover tooltip explaining requirement
+
+--> Close
