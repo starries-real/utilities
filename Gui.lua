@@ -571,7 +571,8 @@ end
 
 function Gui.Child(Id, Size, Border, BodyFn)
     SafeCall(function()
-        local Width = Size or 0
+        if not Id then Id = "##ChildDefault" end
+        local Width = 0
         local Height = 0
         
         if type(Size) == "number" then
@@ -582,11 +583,18 @@ function Gui.Child(Id, Size, Border, BodyFn)
         
         Width, Height = ValidateChildSize(Width, Height)
         
-        local Open = ImGui.BeginChild(Id, ImVec2(Width, Height), Border == true)
+        local Open = ImGui.BeginChild(tostring(Id), ImVec2(Width, Height), Border == true)
         if Open then
             GuiState.ChildDepth = GuiState.ChildDepth + 1
-            SafeCall(BodyFn, "Child.Body")
-            ImGui.EndChild()
+            local Success, Err = pcall(function()
+                if type(BodyFn) == "function" then
+                    BodyFn()
+                end
+            end)
+            if not Success then
+                Log("Child body error: " .. tostring(Err), "Error")
+            end
+            ImGui.EndChild()  -- PENTING: Selalu EndChild!
             GuiState.ChildDepth = math.max(0, GuiState.ChildDepth - 1)
         end
         return Open
@@ -961,16 +969,24 @@ end
 function Gui.TabBar(Id, Tabs)
     local Result = false
     SafeCall(function()
-        if not ImGui.BeginTabBar(Id or "##TabBar") then return false end
+        if not Id then Id = "##TabBarDefault" end
+        if not ImGui.BeginTabBar(tostring(Id)) then return false end
+        
         for _, T in ipairs(Tabs or {}) do
-            local Label = T.Label or "Tab"
-            local Flags = T.Flags or 0
-            if ImGui.BeginTabItem(Label, nil, Flags) then
-                SafeCall(T.Draw, "TabBar.Draw", T)
-                ImGui.EndTabItem()
+            if T and T.Label then
+                local Label = tostring(T.Label)
+                local Flags = T.Flags or 0
+                if ImGui.BeginTabItem(Label, nil, Flags) then
+                    local Success, Err = pcall(T.Draw, T)
+                    if not Success then
+                        Log("TabBar draw error: " .. tostring(Err), "Error")
+                    end
+                    ImGui.EndTabItem()
+                end
             end
         end
-        ImGui.EndTabBar()
+        
+        ImGui.EndTabBar()  -- PENTING: Jangan lupa ini!
         Result = true
     end, "TabBar")
     return Result
@@ -1202,33 +1218,51 @@ function DrawTwoPanelMappedTab(Spec)
     if not Data then return end
 
     DrawSubTabRoot("##"..Spec.Id, Spec.Title, function()
+        ImGui.Columns(2, "##"..Spec.Id.."Cols", false)
 
-        -- ===== Panels =====
-        Gui.Columns(2, "##"..Spec.Id.."Cols", false, function()
+        -- LEFT PANEL
+        if ImGui.BeginChild("##"..Spec.Id.."Main", ImVec2(0, 207), true) then
+            if Gui.Header then
+                Gui.Header(Spec.LeftTitle)
+            else
+                Gui.Text(Spec.LeftTitle)
+                Gui.Separator()
+            end
+            for _, Name in ipairs(Data.Feature or {}) do
+                local Success, Err = pcall(function()
+                    Gui.CheatToggleMapped(Name, Spec.Mapping and Spec.Mapping[Name])
+                end)
+                if not Success then Log("CheatToggle error: " .. tostring(Err), "Error") end
+            end
+            ImGui.EndChild()
+        end
 
-            -- Left
-            DrawPanel("##"..Spec.Id.."Main", Spec.LeftTitle, 207, function()
-                for _, Name in ipairs(Data.Feature or {}) do
-                    Gui.CheatToggleMapped(Name, Spec.Mapping[Name])
-                end
-            end)
+        ImGui.NextColumn()
 
-            ImGui.NextColumn()
+        -- RIGHT PANEL
+        if ImGui.BeginChild("##"..Spec.Id.."More", ImVec2(0, 207), true) then
+            if Gui.Header then
+                Gui.Header(Spec.RightTitle)
+            else
+                Gui.Text(Spec.RightTitle)
+                Gui.Separator()
+            end
+            for _, Name in ipairs(Data.More or {}) do
+                local Success, Err = pcall(function()
+                    Gui.CheatToggleMapped(Name, Spec.Mapping and Spec.Mapping[Name])
+                end)
+                if not Success then Log("CheatToggle error: " .. tostring(Err), "Error") end
+            end
+            ImGui.EndChild()
+        end
 
-            -- Right
-            DrawPanel("##"..Spec.Id.."More", Spec.RightTitle, 207, function()
-                for _, Name in ipairs(Data.More or {}) do
-                    Gui.CheatToggleMapped(Name, Spec.Mapping[Name])
-                end
-            end)
-        end)
+        ImGui.Columns(1)  -- Tutup columns
 
+        -- FOOTER
         Gui.Spacing()
-
-        -- ===== Footer =====
-        Gui.Child("##"..Spec.Id.."Footer", ImVec2(ImGui.GetColumnWidth() - 4, 0), true, function()
+        if ImGui.BeginChild("##"..Spec.Id.."Footer", ImVec2(0, 0), true) then
             Gui.Header(Icon("Asterisk") .. " Quick Controls:")
-
+            
             local AllEnabled = IsAllEnabledFromLists({ Data.Feature, Data.More })
             local Enable = not AllEnabled
 
@@ -1245,14 +1279,18 @@ function DrawTwoPanelMappedTab(Spec)
 
             if Spec.ExtraFooter then
                 Gui.SameLine()
-                Spec.ExtraFooter(Data)
+                local Success, Err = pcall(Spec.ExtraFooter, Data)
+                if not Success then Log("ExtraFooter error: " .. tostring(Err), "Error") end
             end
-        end)
+            
+            ImGui.EndChild()
+        end
     end)
 end
 
 function DrawTwoPanelSlots(Spec)
-
+    if not Spec then return end
+    
     local Id = tostring(Spec.Id or "TwoPanel")
     local Title = tostring(Spec.Title or "Untitled")
 
@@ -1260,23 +1298,52 @@ function DrawTwoPanelSlots(Spec)
     local R = Spec.Right or {}
 
     DrawSubTabRoot("##" .. Id .. "Root", Title, function()
-        Gui.Columns(2, "##" .. Id .. "Cols", false, function()
-            DrawPanel("##" .. (L.Id or (Id .. "Left")), L.Title or "", L.Height or 207, function()
-                if type(L.BodyFn) == "function" then L.BodyFn() end
-            end)
+        -- Gunakan Columns dengan proper nesting
+        ImGui.Columns(2, "##" .. Id .. "Cols", false)
+        
+        -- LEFT PANEL
+        if ImGui.BeginChild("##" .. (L.Id or (Id .. "Left")), ImVec2(0, L.Height or 207), true) then
+            if Gui.Header then
+                Gui.Header(L.Title or "")
+            else
+                Gui.Text(L.Title or "")
+                Gui.Separator()
+            end
+            if type(L.BodyFn) == "function" then 
+                local Success, Err = pcall(L.BodyFn)
+                if not Success then Log("Left panel error: " .. tostring(Err), "Error") end
+            end
+            ImGui.EndChild()
+        end
 
-            ImGui.NextColumn()
+        ImGui.NextColumn()
 
-            DrawPanel("##" .. (R.Id or (Id .. "Right")), R.Title or "", R.Height or 207, function()
-                if type(R.BodyFn) == "function" then R.BodyFn() end
-            end)
-        end)
+        -- RIGHT PANEL
+        if ImGui.BeginChild("##" .. (R.Id or (Id .. "Right")), ImVec2(0, R.Height or 207), true) then
+            if Gui.Header then
+                Gui.Header(R.Title or "")
+            else
+                Gui.Text(R.Title or "")
+                Gui.Separator()
+            end
+            if type(R.BodyFn) == "function" then 
+                local Success, Err = pcall(R.BodyFn)
+                if not Success then Log("Right panel error: " .. tostring(Err), "Error") end
+            end
+            ImGui.EndChild()
+        end
 
+        ImGui.Columns(1)  -- Tutup columns
+
+        -- FOOTER
         if Spec.Footer and type(Spec.Footer.BodyFn) == "function" then
             Gui.Spacing()
-            Gui.Child("##" .. (Spec.Footer.Id or (Id .. "Footer")), ImVec2(ImGui.GetColumnWidth() - 4, 0), true, function()
-                Spec.Footer.BodyFn()
-            end)
+            if ImGui.BeginChild("##" .. (Spec.Footer.Id or (Id .. "Footer")), ImVec2(0, 0), true) then
+                Gui.Header(Icon("Asterisk") .. " Quick Controls:")
+                local Success, Err = pcall(Spec.Footer.BodyFn)
+                if not Success then Log("Footer error: " .. tostring(Err), "Error") end
+                ImGui.EndChild()
+            end
         end
     end)
 end
