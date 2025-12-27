@@ -8,18 +8,16 @@
         -- Gunakan ProtectFunction dari error handler jika tersedia
         if ProtectFunction then
             local ProtectedFn = ProtectFunction(Fn, Where or "Gui:SafeCall", function(...)
-                if Console then Console("SafeCall Fallback: " .. Where, "Warning") end
+                -- Fallback silent, error sudah di-handle sama error handler + webhook
                 return nil
             end, {
                 DebugMode = false
             })
             return ProtectedFn(...)
         else
-            -- Fallback jika ProtectFunction belum loaded
+            -- Fallback jika ProtectFunction belum loaded (silent mode)
             local Ok, Err = pcall(Fn, ...)
-            if not Ok then
-                if Console then Console("UI Error (" .. Where .. "): " .. tostring(Err), "Error") end
-            end
+            -- Tidak log apapun, biarkan continue
         end
     end
 
