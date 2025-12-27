@@ -1,12 +1,25 @@
---> ImGui Builder
+--> ImGui Builder with Error Handler Support
 
     Gui = Gui or {}
 
-    local function SafeCall(Fn, ...)
+    local function SafeCall(Fn, Where, ...)
         if type(Fn) ~= "function" then return end
-        local Ok, Err = pcall(Fn, ...)
-        if not Ok then
-            if Console then Console("UI Error: " .. tostring(Err), "Error") end
+        
+        -- Gunakan ProtectFunction dari error handler jika tersedia
+        if ProtectFunction then
+            local ProtectedFn = ProtectFunction(Fn, Where or "Gui:SafeCall", function(...)
+                if Console then Console("SafeCall Fallback: " .. Where, "Warning") end
+                return nil
+            end, {
+                DebugMode = false
+            })
+            return ProtectedFn(...)
+        else
+            -- Fallback jika ProtectFunction belum loaded
+            local Ok, Err = pcall(Fn, ...)
+            if not Ok then
+                if Console then Console("UI Error (" .. Where .. "): " .. tostring(Err), "Error") end
+            end
         end
     end
 
@@ -63,7 +76,8 @@
                     tostring(Btn.Label or "Button"),
                     Size,
                     Btn.OnClick,
-                    Btn.Tooltip
+                    Btn.Tooltip,
+                    "Gui:RowButtons:Btn_" .. tostring(Index)
                 )
             end
         end
@@ -177,7 +191,7 @@
                             else
                                 DrawBlank(0.50, 2)
                             end
-                        end)
+                        end, "Gui:BuildTabs:Tab_" .. CleanName)
                     end
                 }
             end
@@ -286,31 +300,31 @@
 
         function Gui.WithItemWidth(Width, BodyFn)
             ImGui.PushItemWidth(Width or 0)
-            SafeCall(BodyFn)
+            SafeCall(BodyFn, "Gui:WithItemWidth")
             ImGui.PopItemWidth()
         end
 
         function Gui.WithStyleVar(Var, Value, BodyFn)
             ImGui.PushStyleVar(Var, Value)
-            SafeCall(BodyFn)
+            SafeCall(BodyFn, "Gui:WithStyleVar")
             ImGui.PopStyleVar()
         end
 
         function Gui.WithStyleColor(Idx, Color, BodyFn)
             ImGui.PushStyleColor(Idx, Color)
-            SafeCall(BodyFn)
+            SafeCall(BodyFn, "Gui:WithStyleColor")
             ImGui.PopStyleColor()
         end
 
         function Gui.WithID(Id, BodyFn)
             ImGui.PushID(tostring(Id or ""))
-            SafeCall(BodyFn)
+            SafeCall(BodyFn, "Gui:WithID:" .. tostring(Id))
             ImGui.PopID()
         end
 
         function Gui.Group(BodyFn)
             ImGui.BeginGroup()
-            SafeCall(BodyFn)
+            SafeCall(BodyFn, "Gui:Group")
             ImGui.EndGroup()
         end
 
@@ -325,7 +339,6 @@
         
             local BarSize = Size
             if BarSize == nil then
-                -- Default: full width available, height follow ImGui default
                 local Avail = ImGui.GetContentRegionAvail()
                 BarSize = ImVec2(Avail.x, 0)
             end
@@ -382,39 +395,37 @@
             end
 
             if ControlWidth then ImGui.PushItemWidth(ControlWidth) end
-            SafeCall(ControlFn)
+            SafeCall(ControlFn, "Gui:LabeledRow:" .. tostring(Label))
             if ControlWidth then ImGui.PopItemWidth() end
         end
 
 
-        function Gui.Child(Id, Size, Border, BodyFn)
+        function Gui.Child(Id, Size, Border, BodyFn, Location)
             local Open = ImGui.BeginChild(Id, Size or ImVec2(0, 0), Border == true)
-            if Open then SafeCall(BodyFn) end
+            if Open then SafeCall(BodyFn, Location or "Gui:Child:" .. tostring(Id)) end
             ImGui.EndChild()
             return Open
         end
 
         function Gui.Columns(Count, Id, Border, BodyFn)
             ImGui.Columns(Count, Id or "##Cols", Border == true)
-            SafeCall(BodyFn)
+            SafeCall(BodyFn, "Gui:Columns:" .. tostring(Id))
             ImGui.Columns(1)
         end
 
         function Gui.TwoColumns(Id, LeftFn, RightFn, Border)
             Gui.Columns(2, Id or "##TwoCols", Border, function()
-                SafeCall(LeftFn)
+                SafeCall(LeftFn, "Gui:TwoColumns:" .. tostring(Id) .. ":Left")
                 ImGui.NextColumn()
-                SafeCall(RightFn)
+                SafeCall(RightFn, "Gui:TwoColumns:" .. tostring(Id) .. ":Right")
             end)
         end
 
         function Gui.Spinner(IconName, Speed)
-            -- Speed: rad/s feel
             local S = tonumber(Speed) or 8.0
             local T = (ImGui.GetTime and ImGui.GetTime() or os.clock())
             local Phase = math.floor((T * S) % 4)
         
-            -- 4-phase pseudo spinner: | / - \
             local Frames = { "|", "/", "-", "\\" }
             Gui.TextDisabled(Gui.IconText(IconName, Frames[Phase + 1]))
         end
@@ -433,9 +444,9 @@
             local BtnW = (AvailW - G) * 0.5
             if BtnW < 10 then BtnW = 10 end
         
-            if Gui.Button(LeftLabel, ImVec2(BtnW, H), OnLeft) then end
+            if Gui.Button(LeftLabel, ImVec2(BtnW, H), OnLeft, nil, "Gui:TwoButtons:Left") then end
             ImGui.SameLine(0, G)
-            if Gui.Button(RightLabel, ImVec2(BtnW, H), OnRight) then end
+            if Gui.Button(RightLabel, ImVec2(BtnW, H), OnRight, nil, "Gui:TwoButtons:Right") then end
         end
 
         function Gui.ToggleAllButton(Lists, OnLabel, OffLabel, Size, OnToggle)
@@ -453,23 +464,23 @@
                 else
                     Gui.SetAllFromLists(Lists, Enable)
                 end
-            end)
+            end, nil, "Gui:ToggleAllButton")
         
             return AllEnabled
         end
 
-        function Gui.Button(Label, Size, OnClick, TooltipText)
+        function Gui.Button(Label, Size, OnClick, TooltipText, Location)
             if ImGui.Button(Label, Size or ImVec2(0, 0)) then
-                SafeCall(OnClick)
+                SafeCall(OnClick, Location or "Gui:Button:" .. tostring(Label))
                 return true
             end
             Gui.Tooltip(TooltipText)
             return false
         end
 
-        function Gui.SmallButton(Label, OnClick, TooltipText)
+        function Gui.SmallButton(Label, OnClick, TooltipText, Location)
             if ImGui.SmallButton(Label) then
-                SafeCall(OnClick)
+                SafeCall(OnClick, Location or "Gui:SmallButton:" .. tostring(Label))
                 return true
             end
             Gui.Tooltip(TooltipText)
@@ -478,7 +489,7 @@
 
         function Gui.IconButton(IconName, IdSuffix, Size, TooltipText, OnClick)
             local Label = Icon(IconName) .. "##" .. tostring(IdSuffix or IconName)
-            return Gui.Button(Label, Size or ImVec2(0, 0), OnClick, TooltipText)
+            return Gui.Button(Label, Size or ImVec2(0, 0), OnClick, TooltipText, "Gui:IconButton:" .. tostring(IdSuffix))
         end
 
         function Gui.Toggle(Label, StateTable, Key, TooltipText)
@@ -506,7 +517,7 @@
                 ImGui.BeginDisabled() 
             end
             
-            local Clicked = Gui.Button(Label, Size or ImVec2(0, 23), OnClick)
+            local Clicked = Gui.Button(Label, Size or ImVec2(0, 23), OnClick, nil, "Gui:WorldButton:" .. tostring(Label))
             
             if not CanClick then
                 ImGui.EndDisabled()
@@ -544,7 +555,7 @@
         function Gui.Checkbox(Label, Value, OnChange, TooltipText)
             local Changed, NewValue = ImGui.Checkbox(tostring(Label or ""), Value == true)
             if Changed and type(OnChange) == "function" then
-                OnChange(NewValue)
+                SafeCall(OnChange, "Gui:Checkbox:" .. tostring(Label), NewValue)
             end
             Gui.Tooltip(TooltipText)
             return Changed, NewValue
@@ -557,7 +568,9 @@
             local Changed, NewValue = ImGui.Checkbox(tostring(Label or ""), Current)
             if Changed then
                 StateTable[Key] = NewValue
-                if type(OnChange) == "function" then OnChange(NewValue) end
+                if type(OnChange) == "function" then 
+                    SafeCall(OnChange, "Gui:ToggleKey:" .. tostring(Label), NewValue)
+                end
             end
 
             Gui.Tooltip(TooltipText)
@@ -570,7 +583,9 @@
             local Changed, NewValue = ImGui.Checkbox(OptionName, Cheats[OptionName] == true)
             if Changed then
                 Cheats[OptionName] = NewValue
-                if type(OnChange) == "function" then OnChange(NewValue) end
+                if type(OnChange) == "function" then 
+                    SafeCall(OnChange, "Gui:CheatToggle:" .. OptionName, NewValue)
+                end
             end
 
             Gui.Tooltip(TooltipText)
@@ -666,7 +681,6 @@
 
     --> Select / Combo
 
-        -- Items = { "A", "B", "C" }
         function Gui.Combo(Label, StateTable, Key, Items, TooltipText)
             local Current = tostring(StateTable[Key] or "")
             local Preview = Current ~= "" and Current or (Items and Items[1]) or ""
@@ -688,7 +702,6 @@
             return Changed, StateTable[Key]
         end
 
-        -- Key stores index (1..N) instead of string
         function Gui.ComboIndex(Label, StateTable, Key, Items, TooltipText)
             local Idx = tonumber(StateTable[Key] or 1)
             if Idx < 1 then Idx = 1 end
@@ -711,9 +724,9 @@
             return Changed, StateTable[Key]
         end
 
-        function Gui.Selectable(Label, Selected, OnClick, TooltipText)
+        function Gui.Selectable(Label, Selected, OnClick, TooltipText, Location)
             if ImGui.Selectable(Label, Selected == true) then
-                SafeCall(OnClick)
+                SafeCall(OnClick, Location or "Gui:Selectable:" .. tostring(Label))
                 Gui.Tooltip(TooltipText)
                 return true
             end
@@ -754,7 +767,7 @@
                 local Label = T.Label or "Tab"
                 local Flags = T.Flags or 0
                 if ImGui.BeginTabItem(Label, nil, Flags) then
-                    SafeCall(T.Draw, T)
+                    SafeCall(T.Draw, "Gui:TabBar:Tab_" .. tostring(Label), T)
                     ImGui.EndTabItem()
                 end
             end
@@ -766,7 +779,7 @@
         function Gui.TreeNode(Label, BodyFn, Flags)
             local Open = ImGui.TreeNodeEx(Label, Flags or 0)
             if Open then
-                SafeCall(BodyFn)
+                SafeCall(BodyFn, "Gui:TreeNode:" .. tostring(Label))
                 ImGui.TreePop()
             end
             return Open
@@ -774,8 +787,8 @@
 
         function Gui.Table(Id, ColumnCount, Flags, OuterSize, InnerWidth, HeaderFn, RowFn)
             if ImGui.BeginTable(Id, ColumnCount, Flags or 0, OuterSize or ImVec2(0, 0), InnerWidth or 0) then
-                if HeaderFn then SafeCall(HeaderFn) end
-                if RowFn then SafeCall(RowFn) end
+                if HeaderFn then SafeCall(HeaderFn, "Gui:Table:" .. tostring(Id) .. ":Header") end
+                if RowFn then SafeCall(RowFn, "Gui:Table:" .. tostring(Id) .. ":Row") end
                 ImGui.EndTable()
                 return true
             end
@@ -795,7 +808,7 @@
 
         function Gui.Popup(Id, BodyFn)
             if ImGui.BeginPopup(Id) then
-                SafeCall(BodyFn)
+                SafeCall(BodyFn, "Gui:Popup:" .. tostring(Id))
                 ImGui.EndPopup()
                 return true
             end
@@ -809,7 +822,7 @@
         function Gui.Modal(Id, BodyFn, Flags)
             local Open = true
             if ImGui.BeginPopupModal(Id, Open, Flags or 0) then
-                SafeCall(BodyFn)
+                SafeCall(BodyFn, "Gui:Modal:" .. tostring(Id))
                 ImGui.EndPopup()
                 return true
             end
@@ -828,9 +841,9 @@
                 local T = It.Type or "Button"
                 if T == "Button" then
                     local W = It.W or 80
-                    Gui.Button(It.Label or "Button", ImVec2(W, It.H or H), It.OnClick, It.Tip)
+                    Gui.Button(It.Label or "Button", ImVec2(W, It.H or H), It.OnClick, It.Tip, "Gui:Toolbar:Button_" .. tostring(i))
                 elseif T == "SmallButton" then
-                    Gui.SmallButton(It.Label or "Button", It.OnClick, It.Tip)
+                    Gui.SmallButton(It.Label or "Button", It.OnClick, It.Tip, "Gui:Toolbar:SmallButton_" .. tostring(i))
                 elseif T == "TextDisabled" then
                     Gui.TextDisabled(It.Text or "")
                 elseif T == "TextColored" then
