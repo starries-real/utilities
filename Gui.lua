@@ -2,25 +2,6 @@
 
     Gui = Gui or {}
 
-    local function SafeCall(Fn, Where, ...)
-        if type(Fn) ~= "function" then return end
-        
-        -- Gunakan ProtectFunction dari error handler jika tersedia
-        if ProtectFunction then
-            local ProtectedFn = ProtectFunction(Fn, Where or "Gui:SafeCall", function(...)
-                -- Fallback silent, error sudah di-handle sama error handler + webhook
-                return nil
-            end, {
-                DebugMode = false
-            })
-            return ProtectedFn(...)
-        else
-            -- Fallback jika ProtectFunction belum loaded (silent mode)
-            local Ok, Err = pcall(Fn, ...)
-            -- Tidak log apapun, biarkan continue
-        end
-    end
-
     --> Basic
 
         function Gui.Paragraph(Text, Width, Indent)
